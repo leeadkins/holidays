@@ -11,12 +11,21 @@ defmodule Holidays.TestHelper do
       end
     end
   end
-  
+
   defmacro holiday_test(name, date, region) do
     test_name = "#{name} on #{inspect date} in #{inspect region}"
     quote do
       test unquote(test_name) do
         assert Holidays.on(unquote(date), [unquote(region)]) == [%{name: unquote(name)}]
+      end
+    end
+  end
+
+  defmacro no_holiday_test(date, region) do
+    test_name = "No holiday on #{inspect date} in #{inspect region}"
+    quote do
+      test unquote(test_name) do
+        assert Holidays.on(unquote(date), [unquote(region)]) == []
       end
     end
   end

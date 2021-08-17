@@ -6,9 +6,11 @@ defmodule Holidays.Define do
   def start_link() do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
-
+  def holiday(name, %{month: month, day: day, regions: regions, observed: observed}) do
+    GenServer.cast(__MODULE__, {:add_entry, :static, {name, month, day, regions, observed}})
+  end
   def holiday(name, %{month: month, day: day, regions: regions}) do
-    GenServer.cast(__MODULE__, {:add_entry, :static, {name, month, day, regions}})
+    GenServer.cast(__MODULE__, {:add_entry, :static, {name, month, day, regions, nil}})
   end
   def holiday(name, %{month: month, week: week, weekday: weekday, regions: regions}) do
     GenServer.cast(__MODULE__, {:add_entry, :nth, {name, month, week, weekday, regions}})
@@ -28,13 +30,19 @@ defmodule Holidays.Define do
     on_fun(funs, date)
   end
 
-  defp on_static(holidays, {_, month, day}) do
+  defp on_static(holidays, {year, month, day}) do
     holidays
     |> Enum.filter(fn
-      {_, ^month, ^day, _} -> true
+      {_, m, d, _, {:to_monday_if_sunday, _}} ->
+        {year, month, day} == Holidays.DateCalculator.WeekendModifier.to_monday_if_sunday({year, m, d})
+      {_, m, d, _, {:to_monday_if_weekend, _}} ->
+        {year, month, day} == Holidays.DateCalculator.WeekendModifier.to_monday_if_weekend({year, m, d})
+      {_, m, d, _, {:to_weekday_if_weekend, _}} ->
+        {year, month, day} == Holidays.DateCalculator.WeekendModifier.to_weekday_if_weekend({year, m, d})
+      {_, ^month, ^day, _, nil} -> true
       _ -> false
     end)
-    |> Enum.map(fn {name, _, _, regions} -> %{name: name, regions: regions} end)
+    |> Enum.map(fn {name, _, _, regions, _} -> %{name: name, regions: regions} end)
   end
 
   defp on_nth(holidays, date) do
